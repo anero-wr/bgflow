@@ -63,7 +63,7 @@ class LennardJonesPotentialPPP(Energy):
         if self.oscillator:
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1)).view(*batch_shape)
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
-        print lj_energies
+        print(lj_energies)
         return lj_energies[:, None]
 
     def _remove_mean(self, x):

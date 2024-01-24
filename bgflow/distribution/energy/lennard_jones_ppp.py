@@ -8,7 +8,7 @@ __all__ = ["LennardJonesPotentialPPP"]
 
 def lennard_jones_energy_torch(r, eps=1.0, rm=1.0, rct=2.5):
 
-    r = torch.where(torch.tensor(r < rct), r, torch.tensor(1000000.))
+    r = torch.where((r < rct).clone().detach(), r, torch.tensor(1000000.))
     lj = eps * ((rm / r) ** 12 - 2 * (rm / r) ** 6) / 2.
 
     return lj
@@ -63,7 +63,9 @@ class LennardJonesPotentialPPP(Energy):
         if self.oscillator:
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1)).view(*batch_shape)
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
-        print(lj_energies)
+
+        lj_energies = lj_energies.flatten()
+
         return lj_energies[:, None]
 
     def _remove_mean(self, x):
@@ -76,6 +78,6 @@ class LennardJonesPotentialPPP(Energy):
 
     def _distance_vectors_ppp(self, x):
         dv = distance_vectors(x.view(-1, self._n_particles, self._n_dims))
-        hside = self._side/2.
-        return torch.where(torch.tensor(abs(dv) < hside), dv, dv - self._side*dv.sign())
+        h_side = self._side/2.
+        return torch.where((abs(dv) < h_side).clone().detach(), dv, dv - self._side*dv.sign())
 

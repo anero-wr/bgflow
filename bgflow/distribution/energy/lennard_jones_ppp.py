@@ -55,6 +55,9 @@ class LennardJonesPotentialPPP(Energy):
         batch_shape = x.shape[:-len(self.event_shape)]
         x = x.view(*batch_shape, self._n_particles, self._n_dims)
 
+        x = torch.where((x > self._side).clone().detach(), x, x - self._side * torch.floor(x/self._side))
+        x = torch.where((x < 0).clone().detach(), x, x - self._side * torch.floor(x / self._side))
+
         dists = distances_from_vectors(self._distance_vectors_ppp(x))
 
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm, self._rct)

@@ -61,7 +61,7 @@ class LennardJonesPotentialPPP(Energy):
         dists = distances_from_vectors(self._distance_vectors_ppp(x))
 
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm, self._rct)
-        lj_energies = lj_energies.view(*batch_shape, -1).sum(dim=-1) / self._n_particles
+        lj_energies = lj_energies.view(*batch_shape, -1).sum(dim=-1)
 
         if self.oscillator:
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1)).view(*batch_shape)

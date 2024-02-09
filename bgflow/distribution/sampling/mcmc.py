@@ -21,7 +21,7 @@ from ._iterative_helpers import default_set_samples_hook
 
 
 __all__ = [
-    "GaussianMCMCSampler", "MCMCStep", "GaussianProposal", "LatentProposal",
+    "LatentGaussianMCMCSampler", "GaussianMCMCSampler", "MCMCStep", "GaussianProposal", "LatentProposal",
     "metropolis_accept"
 ]
 
@@ -73,6 +73,7 @@ class LatentProposal(torch.nn.Module):
         *z, logdet_inverse = self.flow.forward(
             *state.as_dict()["samples"], inverse=True, **self.flow_kwargs
         )
+        z = [torch.Tensor(item.data) for item in z] #torch.Tensor(z[0].data)
         proposed_latent, delta_log_prob = self.base_proposal.forward(state.replace(samples=z))
         *proposed_samples, logdet_forward = self.flow.forward(*proposed_latent.as_dict()["samples"])
         # g(x|x') = g(x|z') = p_z (F_{zx}^{-1}(x)  | z') * log | det J_{zx}^{-1} (x) |
@@ -80,6 +81,7 @@ class LatentProposal(torch.nn.Module):
         # log g(x'|x) = log p(z'|z) + logabsdet J_{zx}^-1 (x')
         # log g(x'|x) - log g(x|x') = log p(z|z') - log p(z|z') - logabsdet_forward - logsabdet_inverse
         delta_log_prob = delta_log_prob - (logdet_forward + logdet_inverse)
+        proposed_samples = [torch.Tensor(item.data) for item in proposed_samples]
         return proposed_latent.replace(samples=proposed_samples), delta_log_prob[:, 0]
 
 
@@ -188,6 +190,51 @@ class GaussianMCMCSampler(IterativeSampler):
             return_hook=return_hook
         )
 
+
+class LatentGaussianMCMCSampler(IterativeSampler):
+
+    def __init__(
+            self,
+            energy,
+            init_state,
+            flow,
+            temperature=1.,
+            noise_std=.1,
+            stride=1,
+            n_burnin=0,
+            box_constraint=None,
+            return_hook=None,
+            **kwargs
+    ):
+        # first, some things to ensure backwards compatibility
+        # apply the box constraint function whenever samples are set
+        set_samples_hook = default_set_samples_hook
+        if box_constraint is not None:
+            set_samples_hook = lambda samples: [box_constraint(x) for x in samples]
+        if not isinstance(init_state, SamplerState):
+            init_state = SamplerState(samples=init_state, set_samples_hook=set_samples_hook)
+        # flatten batches before returning
+        if return_hook is None:
+            return_hook = lambda samples: [
+                x.reshape(-1, *shape) for x, shape in zip(samples, energy.event_shapes)
+            ]
+        if "n_stride" in kwargs:
+            warnings.warn("keyword n_stride is deprecated, use stride instead", DeprecationWarning)
+            stride = kwargs["n_stride"]
+        # set up sampler
+        super().__init__(
+            init_state,
+            sampler_steps=[
+                MCMCStep(
+                    energy,
+                    proposal=LatentProposal(flow=flow),
+                    target_temperatures=temperature,
+                ),
+            ],
+            stride=stride,
+            n_burnin=n_burnin,
+            return_hook=return_hook
+        )
 
 def metropolis_accept(
         current_energies,

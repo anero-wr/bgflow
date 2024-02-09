@@ -15,7 +15,7 @@ def _is_symmetric_matrix(m):
 
 
 class NormalDistribution(Energy, Sampler):
-    def __init__(self, dim, mean=None, cov=None):
+    def __init__(self, dim, mean=None, cov=None, shape=None):
         super().__init__(dim=dim)
         self._has_mean = mean is not None
         if self._has_mean:
@@ -27,6 +27,8 @@ class NormalDistribution(Energy, Sampler):
         self._has_cov = False
         if cov is not None:
             self.set_cov(cov)
+        if shape is not None:
+            self._shape = shape
 
     def energy(self, x, temperature=1.0):
         if self._has_mean:

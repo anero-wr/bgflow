@@ -61,6 +61,7 @@ class LennardJonesPotential(Energy):
             osc_energies = 0.5 * self._remove_mean(x).pow(2).sum(dim=(-2, -1)).view(*batch_shape)
             lj_energies = lj_energies + osc_energies * self._oscillator_scale
 
+        lj_energies = lj_energies.flatten()
         return lj_energies[:, None]
 
     def _remove_mean(self, x):

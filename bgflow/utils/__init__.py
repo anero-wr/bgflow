@@ -86,6 +86,7 @@ from .autograd import *
 from .geometry import (
     distance_vectors,
     distances_from_vectors,
+    distances_from_vectors_ppp,
     remove_mean,
     compute_distances
 )

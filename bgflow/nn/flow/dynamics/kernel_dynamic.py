@@ -111,7 +111,7 @@ class KernelDynamics(torch.nn.Module):
 
         if not self._periodic:
             d = distances_from_vectors(r).unsqueeze(-1)
-        if self._periodic:
+        else:
             d = distances_from_vectors_ppp(r, self._side, self._n_particles, self._n_dimensions).unsqueeze(-1)
 
         force_mag, d_force_mag = self._force_mag(t, d, derivative=compute_divergence)

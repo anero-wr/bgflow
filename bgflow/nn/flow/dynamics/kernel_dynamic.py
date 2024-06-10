@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from ....utils import distance_vectors, distances_from_vectors, distances_from_vectors_ppp, rbf_kernels
+from ....utils import distance_vectors, distances_from_vectors, length_ppp, rbf_kernels
 
 
 class KernelDynamics(torch.nn.Module):
@@ -112,7 +112,7 @@ class KernelDynamics(torch.nn.Module):
         if not self._periodic:
             d = distances_from_vectors(r).unsqueeze(-1)
         else:
-            d = distances_from_vectors_ppp(r, self._side, self._n_particles, self._n_dimensions).unsqueeze(-1)
+            d = distances_from_vectors(length_ppp(r, self._side)).unsqueeze(-1)
 
         force_mag, d_force_mag = self._force_mag(t, d, derivative=compute_divergence)
         forces = (r * force_mag).sum(dim=-2)

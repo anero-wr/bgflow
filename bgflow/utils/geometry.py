@@ -110,15 +110,7 @@ def distances_from_vectors(r, eps=1e-6):
     """
     return (r.pow(2).sum(dim=-1) + eps).sqrt()
 
-
-def distances_from_vectors_ppp(x, side, n_particles, n_dims):
-
-    dv = distance_vectors(x.view(-1, n_particles, n_dims))
-    dv = torch.where((abs(dv) < side).clone().detach(), dv, dv - 2 * side * dv.sign())
-
-    return distances_from_vectors(dv)
-
-def compute_distances(x, n_particles, n_dimensions, remove_duplicates=True):
+def compute_distances(x, n_particles, n_dimensions, remove_duplicates=True, side=0):
     """
     Computes the all distances for a given particle configuration x.
 
@@ -140,6 +132,9 @@ def compute_distances(x, n_particles, n_dimensions, remove_duplicates=True):
     """
     x = x.reshape(-1, n_particles, n_dimensions)
     distances = torch.cdist(x, x)
+    if (side > 0):
+        distances = length_ppp(distances, torch.sqrt(n_dimensions) * side)
+
     if remove_duplicates:
         distances = distances[:, torch.triu(torch.ones((n_particles, n_particles)), diagonal=1) == 1]
         distances = distances.reshape(-1, n_particles * (n_particles - 1) // 2)
@@ -171,3 +166,10 @@ def remove_mean(samples, n_particles, n_dimensions):
         samples = samples - samples.mean(axis=1, keepdims=True)
         samples = samples.reshape(*shape)
     return samples
+
+def length_ppp(x, side):
+
+    while torch.any(torch.gt(torch.abs(x), side)):
+        x = torch.where((torch.abs(x) <= side).clone().detach(), x, x - 2 * side * torch.sign(x))
+
+    return x

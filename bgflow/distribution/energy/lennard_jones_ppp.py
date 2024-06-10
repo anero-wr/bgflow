@@ -1,6 +1,7 @@
 from .base import Energy
-from bgflow.utils import distance_vectors, distances_from_vectors, distances_from_vectors_ppp
+from bgflow.utils import distance_vectors, length_ppp, distances_from_vectors
 import torch
+import numpy as np
 
 
 __all__ = ["LennardJonesPotentialPPP"]
@@ -54,10 +55,11 @@ class LennardJonesPotentialPPP(Energy):
     def _energy(self, x):
         batch_shape = x.shape[:-len(self.event_shape)]
         x = x.view(*batch_shape, self._n_particles, self._n_dims)
+        x = length_ppp(x, self._side)
 
-        x = torch.where((abs(x) > self._side).clone().detach(), x - 2 * self._side * torch.floor(abs(x)/self._side), x )
+        r = distance_vectors(x.view(-1, self._n_particles, self._n_dims))
 
-        dists = distances_from_vectors_ppp(x, self._side, self._n_particles, self._n_dims)
+        dists = distances_from_vectors(length_ppp(r, self._side))
 
         lj_energies = lennard_jones_energy_torch(dists, self._eps, self._rm, self._rct)
         lj_energies = lj_energies.view(*batch_shape, -1).sum(dim=-1)

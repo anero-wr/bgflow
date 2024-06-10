@@ -1,5 +1,7 @@
 import torch
 
+from bgflow.utils import length_ppp
+
 from .base import Flow
 from .dynamics import (
     DensityDynamics,
@@ -41,6 +43,7 @@ class DiffEqFlow(Flow):
         self._t_max = t_max
         self._use_checkpoints = use_checkpoints
         self._kwargs = kwargs
+        self._side = 0
 
     def _forward(self, *xs, **kwargs):
         return self._run_ode(*xs, dynamics=self._dynamics, **kwargs)
@@ -90,6 +93,8 @@ class DiffEqFlow(Flow):
             state = torch.cat(state, dim=-1)
             anode_dynamics = AnodeDynamics(dynamics)
             state = odesolver_adjoint(anode_dynamics, state, options=kwargs)
+            if (self._side > 0):
+                state = length_ppp(state, self._side)
             ys = [state[:, :-1]]
             dlogp = [state[:, -1:]]
         dlogp = dlogp[-1]
